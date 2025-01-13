@@ -29,6 +29,9 @@ gem "jbuilder"
 
 gem "mysql2"
 
+gem 'mocha', require: false
+
+
 #Use Redis adapter to run Action Cable in production
 gem "redis", "~> 4.0"
 

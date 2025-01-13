@@ -17,10 +17,11 @@ This is a Ruby on Rails application to fetch and display forecast data for speci
 - Detailed comments and decomposition for maintainability.
 
 ## Setup
-1. Clone the repository.
+1. Clone the repository. You can do this with the command git clone https://github.com/DevSedrickYudo/Assessment.git
 2. Run `bundle install`.
-3. Set `ADD_TEMP_API_KEY` in your `.env` file.
-4. Run `rails s` and visit `http://localhost:3000`.
+3. Add .env file to your root for the project 
+4. `ADD_TEMP_API_KEY=f5d052276cb5472d86b33812251301` in your `.env` file. (only available 14 days from Jan 13th)
+5. Run `rails s` and visit `http://localhost:3000`.
 
 ## Scalability
 - Leveraged caching to handle high traffic.
