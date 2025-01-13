@@ -1,0 +1,11 @@
+<!-- app/views/weather/fetch_forecast.html.erb -->
+<h1>Weather Forecast</h1>
+
+<% if @weather && @location %>
+  <h2>Weather for <%= @location["name"] %>, <%= @location["region"] %>, <%= @location["country"] %></h2>
+  <p><strong>Temperature:</strong> <%= @weather["temp_c"] %>°C (<%= @weather["temp_f"] %>°F)</p>
+  <p><strong>Condition:</strong> <%= @weather["condition"]["text"] %></p>
+  <img src="https:<%= @weather["condition"]["icon"] %>" alt="<%= @weather["condition"]["text"] %>">
+<% else %>
+  <p>No weather data available.</p>
+<% end %>

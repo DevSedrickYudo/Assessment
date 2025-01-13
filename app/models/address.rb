@@ -1,3 +1,2 @@
-def Address
-  
+class Address < ApplicationRecord
 end

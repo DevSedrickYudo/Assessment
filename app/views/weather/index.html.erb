@@ -1,0 +1,39 @@
+<h2>Input Address to view Forecast</h2>
+<!-- Due to the quick nature of the product, no use for helpers with Ajax is required, so turbo drive is disables for this form -->
+<%= form_with url: 'fetch_forecast', method: :post, local: true, data: { turbo: false } do |form| %>
+  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+	  <%= form.label :street, "Enter Street:" %>
+	  <%= form.text_field :street, required: false %><br><br>
+	  <%= form.label :zip_code, "Enter ZIP Code:" %>
+	  <%= form.text_field :zip_code, required: true %><br><br>
+	  
+	  <%= form.radio_button :temp, 'c', id: 'temp_c',required: true %>
+	  <%= form.label :temp_c, 'Temp in Celcius' %><br>
+
+	  <%= form.radio_button :temp, 'f', id: 'temp_f',required: true %>
+	  <%= form.label :temp_f, 'Temp In Farenheit' %><br><br>
+	  
+	  
+  </span>	  
+  <%= form.submit "Get Forecast" %>
+<% end %>
+
+<% if @current_temp %>
+  <h2>Forecast for <%= @address %><hr></h2>
+  <p>Current Temperature: <%= @current_temp %></p>
+  <% if @high_temp && @low_temp %>
+    <p>High: <%= @high_temp %></p>
+    <p>Low: <%= @low_temp %></p>
+  <% end %>
+  <p>Other Temp Info</p>
+  <p>Feels like: <%= @feels_like %></p>
+  <p>Wind Chill: <%= @wind_chill %></p>
+  <p>Heat Index: <%= @heat_index %></p>
+  <p>Dew Point: <%= @dew_point %></p>
+  
+  <p><%= @is_cached ? "Data retrieved from cache." : "Fresh data retrieved." %></p>
+<% end %>
+
+<% if flash[:error] %>
+  <p style="color: red;"><%= flash[:error] %></p>
+<% end %>

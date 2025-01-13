@@ -1,0 +1,13 @@
+<h1>New address</h1>
+
+<%= form_with model: @address do |form| %>
+  <div>
+	  <%= geocomplete_lookup %>
+    <%= form.label :address %>
+    <%= form.text_field :address %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

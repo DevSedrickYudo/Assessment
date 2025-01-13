@@ -1,0 +1,202 @@
+# Weather Forecast Application
+
+## Description
+This is a Ruby on Rails application to fetch and display forecast data for specified Address using the WeatherAPI.
+
+---
+
+### 1. File: `config/routes.rb`
+```ruby
+Rails.application.routes.draw do  
+  root 'weather#index'
+  
+  post 'fetch_forecast', to: 'weather#fetch_forecast'
+
+  match "fetch_forecast", controller: "weather", action: "fetch_forecast", via: %i[get post]
+end
+```
+
+---
+
+### 2. File: `app/controllers/weather_controller.rb`
+```ruby
+class WeatherController < ApplicationController
+  def index
+  end
+
+  def fetch_forecast
+    zip_code = params[:zip_code]
+    street = params[:street] rescue nil
+    forecast = WeatherService.get_forecast(zip_code) # Weather API Data set up and collection can be found in this method
+    
+    if forecast
+      @address = []
+      @address << "#{street}" if street.length > 0
+      if forecast['location'].present?
+        @address << "#{forecast['location']['name']}"
+        @address << "#{forecast['location']['region']}"
+        @address << "#{zip_code}"
+      end
+      @address = @address.join(", ")
+      if params[:temp].to_s.eql?('c')
+        @current_temp = "#{forecast['current']['temp_c']} °C"
+        @high_temp = "#{forecast['forecast']&.dig('forecastday', 0, 'day', 'maxtemp_c')} °C" if forecast['forecast']&.dig('forecastday', 0, 'day', 'maxtemp_c')
+        @low_temp = "#{forecast['forecast']&.dig('forecastday', 0, 'day', 'mintemp_c')} °C" if forecast['forecast']&.dig('forecastday', 0, 'day', 'mintemp_c')
+        @feels_like = "#{forecast['current']['feelslike_c']} °C" if forecast['current']['feelslike_c']
+        @wind_chill = "#{forecast['current']['windchill_c']} °C" if forecast['current']['windchill_c']
+        @heat_index = "#{forecast['current']['heatindex_c']} °C" if forecast['current']['heatindex_c']
+        @dew_point = "#{forecast['current']['dewpoint_c']} °C" if forecast['current']['dewpoint_c']
+      else
+        @current_temp = "#{forecast['current']['temp_f']} F"
+        @high_temp = "#{forecast['forecast']&.dig('forecastday', 0, 'day', 'maxtemp_f')} F" if forecast['forecast']&.dig('forecastday', 0, 'day', 'mintemp_f')
+        @low_temp = "#{forecast['forecast']&.dig('forecastday', 0, 'day', 'mintemp_f')} F" if forecast['forecast']&.dig('forecastday', 0, 'day', 'mintemp_f')
+        @feels_like = "#{forecast['current']['feelslike_f']} F" if forecast['current']['feelslike_f']
+        @wind_chill = "#{forecast['current']['windchill_f']} F" if forecast['current']['windchill_f']
+        @heat_index = "#{forecast['current']['heatindex_f']} F" if forecast['current']['heatindex_f']
+        @dew_point = "#{forecast['current']['dewpoint_c']} F" if forecast['current']['dewpoint_c']
+      end
+       
+      @is_cached = Rails.cache.exist?("forecast_#{zip_code}")
+      
+      flash[:error] = nil      
+    else
+      flash[:error] = "Could not fetch weather data. Please try again."
+    end
+    render :index
+  end
+end
+
+```
+
+---
+
+### 3. File: `app/views/weather/index.html.erb`
+```erb
+<h2>Input Address to view Forecast</h2>
+<!-- Due to the quick nature of the product, no use for helpers with Ajax is required, so turbo drive is disables for this form -->
+<%= form_with url: 'fetch_forecast', method: :post, local: true, data: { turbo: false } do |form| %>
+  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+	  <%= form.label :street, "Enter Street:" %>
+	  <%= form.text_field :street, required: false %><br><br>
+	  <%= form.label :zip_code, "Enter ZIP Code:" %>
+	  <%= form.text_field :zip_code, required: true %><br><br>
+	  
+	  <%= form.radio_button :temp, 'c', id: 'temp_c',required: true %>
+	  <%= form.label :temp_c, 'Temp in Celcius' %><br>
+
+	  <%= form.radio_button :temp, 'f', id: 'temp_f',required: true %>
+	  <%= form.label :temp_f, 'Temp In Farenheit' %><br><br>
+	  
+	  
+  </span>	  
+  <%= form.submit "Get Forecast" %>
+<% end %>
+
+<% if @current_temp %>
+  <h2>Forecast for <%= @address %><hr></h2>
+  <p>Current Temperature: <%= @current_temp %></p>
+  <% if @high_temp && @low_temp %>
+    <p>High: <%= @high_temp %></p>
+    <p>Low: <%= @low_temp %></p>
+  <% end %>
+  <p>Other Temp Info</p>
+  <p>Feels like: <%= @feels_like %></p>
+  <p>Wind Chill: <%= @wind_chill %></p>
+  <p>Heat Index: <%= @heat_index %></p>
+  <p>Dew Point: <%= @dew_point %></p>
+  
+  <p><%= @is_cached ? "Data retrieved from cache." : "Fresh data retrieved." %></p>
+<% end %>
+
+<% if flash[:error] %>
+  <p style="color: red;"><%= flash[:error] %></p>
+<% end %>
+
+```
+
+---
+
+### 4. File: `app/services/weather_service.rb`
+```ruby
+require 'httparty'
+
+class WeatherService
+  BASE_URL = "https://api.weatherapi.com/v1/current.json".freeze
+
+  def self.get_forecast(zip_code)
+    # Need to make sure proper forecast data from the Weather API is retrieved. S.Y Jan 10 2025
+    Rails.logger.info "Fetching weather for ZIP code: #{zip_code}" 
+    
+    # Weather API (https://www.weatherapi.com/docs/) uses zipcode to retrive forecast data
+    Rails.cache.fetch("forecast_#{zip_code}", expires_in: 30.minutes) do
+      api_key = ENV['ADD_TEMP_API_KEY']
+      url = "#{BASE_URL}?key=#{api_key}&q=#{zip_code}"
+      
+      # Need to make sure proper URL is routed. S.Y Jan 10 2025
+      Rails.logger.info "API URL: #{url}"
+
+      response = HTTParty.get(url)
+      if response.success?
+        # Viewing API Data in log. S.Y Jan 10 2025
+        Rails.logger.info "API Response: #{response.body}"
+        return JSON.parse(response.body)
+      else
+        Rails.logger.error "API Error: #{response.body}"
+        nil
+      end
+    end
+  end
+end
+```
+
+---
+
+### 5. File: `test/controllers/weather_controller_test.rb`
+```ruby
+require 'test_helper'
+
+class WeatherControllerTest < ActionDispatch::IntegrationTest
+  test 'should get index' do
+    get root_path
+    assert_response :success
+  end
+
+  test 'should fetch forecast' do
+    post fetch_forecast_path, params: { zip_code: '78023' }
+    assert_response :success
+  end
+end
+```
+
+---
+
+### 6. File: `README.md`
+```markdown
+# Weather Forecast App
+
+## Features
+- Fetches real-time weather data from WeatherAPI.
+- Caches results to minimize API usage and improve performance.
+- Unit tests for controllers to ensure reliability.
+- Detailed comments and decomposition for maintainability.
+
+## Setup
+1. Clone the repository.
+2. Run `bundle install`.
+3. Set `WEATHER_API_KEY` in your `.env` file.
+4. Run `rails server` and visit `http://localhost:3000`.
+
+## Scalability
+- Leveraged caching to handle high traffic.
+- Separated business logic into a service object (`WeatherService`).
+
+## Design Patterns
+- Service Object: Encapsulates API interaction logic.
+```
+
+---
+
+This implementation includes:
+- **Service Layer** for API interaction.
+- **Caching** for efficiency.
+- **Detailed Documentation** for maintainability.

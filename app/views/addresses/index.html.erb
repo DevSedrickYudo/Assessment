@@ -1,0 +1,16 @@
+<h1>Addresses</h1>
+
+<%= link_to "New address", new_address_path %>
+
+<div id="addresss">
+  <% @addresses.each do |address| %>
+    <div>
+      <%= link_to address.address, address %>
+    </div>
+  <% end %>
+</div>
+
+
+<% if flash[:error] %>
+  <p style="color: red;"><%= flash[:error] %></p>
+<% end %>
